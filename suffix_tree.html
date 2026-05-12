@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suffix Tree Explorer — Tugas Pak Windu</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0f14;
+  --surface: #16181f;
+  --surface2: #1e2029;
+  --border: #2a2d3a;
+  --accent: #7c6ff7;
+  --accent2: #4ecdc4;
+  --accent3: #f7c948;
+  --leaf: #4ecdc4;
+  --internal: #f7c948;
+  --root-col: #7c6ff7;
+  --text: #e8e9f0;
+  --muted: #7a7d8e;
+  --danger: #f87171;
+  --success: #4ecdc4;
+  --mono: 'Space Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 10px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ── HEADER ── */
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--surface);
+}
+.logo {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 16px;
+  color: #fff;
+  flex-shrink: 0;
+}
+header h1 { font-size: 17px; font-weight: 600; }
+header p  { font-size: 12px; color: var(--muted); }
+.badge {
+  margin-left: auto;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  min-height: calc(100vh - 73px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mode-toggle {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  gap: 4px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 7px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 13px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.field-group { display: flex; flex-direction: column; gap: 0.6rem; }
+.field-group label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+input[type=text] {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+}
+input[type=text]:focus { border-color: var(--accent); }
+input[type=text].hidden { display: none; }
+
+.run-btn {
+  width: 100%;
+  padding: 11px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+}
+.run-btn:hover { opacity: .88; }
+.run-btn:active { transform: scale(.98); }
+
+.section-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+.section-card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .75rem; }
+
+/* Legenda */
+.legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* Suffix list */
+#suffix-list { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+.suffix-row {
+  display: flex; gap: 8px; align-items: baseline;
+  font-family: var(--mono); font-size: 12px; padding: 3px 6px;
+  border-radius: 5px; transition: background .15s;
+}
+.suffix-row:hover { background: var(--border); }
+.suffix-idx { color: var(--muted); min-width: 24px; }
+.suffix-text { color: var(--accent2); }
+
+/* Stats */
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 1px solid var(--border); }
+.stat-row:last-child { border-bottom: none; }
+.stat-val { font-family: var(--mono); color: var(--accent); }
+
+/* ── MAIN AREA ── */
+.main { display: flex; flex-direction: column; overflow: hidden; }
+
+/* TABS */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 1.5rem;
+  gap: 0;
+}
+.tab {
+  padding: 14px 18px;
+  font-size: 13px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: color .2s, border-color .2s;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover:not(.active) { color: var(--text); }
+
+/* TAB CONTENT */
+.tab-content { flex: 1; overflow: hidden; position: relative; }
+.tab-pane { display: none; height: 100%; overflow: auto; padding: 1.5rem; }
+.tab-pane.active { display: block; }
+
+/* TREE PANEL */
+#tree-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  min-height: 400px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 2;
+}
+.tree-placeholder { color: var(--muted); text-align: center; padding: 3rem; }
+
+/* Tree node lines */
+.tree-line { display: flex; align-items: center; gap: 4px; }
+.tree-connector { color: var(--border); white-space: pre; }
+.node-root     { color: var(--root-col); font-weight: 700; }
+.node-internal { color: var(--internal); font-weight: 700; }
+.node-leaf     { color: var(--leaf); }
+.edge-label    { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; margin: 0 3px; color: var(--text); font-size: 12px; }
+.node-detail   { color: var(--muted); font-size: 11px; margin-left: 4px; }
+.node-which    { font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
+.which-s1 { background: rgba(124,111,247,.2); color: var(--accent); }
+.which-s2 { background: rgba(78,205,196,.2); color: var(--accent2); }
+
+/* SEARCH PANEL */
+.search-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+.search-row input { flex: 1; }
+.search-btn {
+  padding: 10px 18px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity .2s;
+  white-space: nowrap;
+}
+.search-btn:hover { opacity: .85; }
+
+#search-result {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  font-size: 14px;
+  line-height: 2;
+  min-height: 80px;
+}
+.hit-pos {
+  display: inline-block;
+  background: rgba(78,205,196,.15);
+  border: 1px solid var(--accent2);
+  color: var(--accent2);
+  border-radius: 4px;
+  padding: 0 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+  margin-left: 3px;
+}
+.hit-word {
+  background: rgba(247,201,72,.2);
+  color: var(--accent3);
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.not-found { color: var(--danger); }
+.found-ok  { color: var(--success); }
+
+/* ANALYSIS PANEL */
+.analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.a-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem;
+}
+.a-card h3 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .6rem; }
+.a-card .result { font-family: var(--mono); font-size: 18px; color: var(--accent3); margin-bottom: .4rem; }
+.a-card .desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.a-full { grid-column: 1/-1; }
+
+/* Char freq bar */
+.freq-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+.freq-bar-wrap { flex: 1; background: var(--border); border-radius: 3px; height: 6px; }
+.freq-bar { height: 6px; border-radius: 3px; background: var(--accent); }
+.freq-char { font-family: var(--mono); min-width: 16px; color: var(--accent2); }
+.freq-n { min-width: 20px; text-align: right; color: var(--muted); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+  .analysis-grid { grid-template-columns: 1fr; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Empty state */
+.empty { color: var(--muted); font-size: 13px; text-align: center; padding: 2rem; }
+
+/* Notice */
+.notice {
+  background: rgba(124,111,247,.1);
+  border: 1px solid rgba(124,111,247,.3);
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+/* ── VISUAL GRAPH ── */
+#graph-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: auto;
+  min-height: 500px;
+  position: relative;
+}
+#graph-svg {
+  display: block;
+}
+.graph-placeholder {
+  color: var(--muted);
+  text-align: center;
+  padding: 3rem;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ST</div>
+  <div>
+    <h1>Suffix Tree Explorer</h1>
+    <p>Eksplorasi Suffix Tree &amp; Textual — Tugas Pak Windu</p>
+  </div>
+  <span class="badge">v1.0</span>
+</header>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+
+    <!-- Mode toggle -->
+    <div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btn-mode1" onclick="setMode(1)">1 Kata</button>
+        <button class="mode-btn" id="btn-mode2" onclick="setMode(2)">2 Kata</button>
+      </div>
+    </div>
+
+    <!-- Input fields -->
+    <div class="field-group">
+      <label id="lbl1">String / Kata</label>
+      <input type="text" id="inp1" placeholder="contoh: banana" maxlength="20">
+      <label id="lbl2" class="hidden">String kedua</label>
+      <input type="text" id="inp2" class="hidden" placeholder="contoh: abracadabra" maxlength="20">
+    </div>
+
+    <button class="run-btn" onclick="run()">▶ Bangun Suffix Tree</button>
+
+    <!-- Legenda -->
+    <div class="section-card">
+      <h3>Legenda Node</h3>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--root-col)"></div><span>[R] ROOT — titik awal tree</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--internal)"></div><span>[I] Internal — percabangan</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--leaf)"></div><span>[L] Daun — akhir satu suffix</span></div>
+    </div>
+
+    <!-- Suffix list -->
+    <div class="section-card" id="card-suffixes" style="display:none">
+      <h3>Semua Suffix</h3>
+      <div id="suffix-list"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="section-card" id="card-stats" style="display:none">
+      <h3>Statistik</h3>
+      <div id="stats-body"></div>
+    </div>
+
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('tree',this)">🌳 Struktur Tree</button>
+      <button class="tab" onclick="switchTab('graph',this)">🔵 Visualisasi Graf</button>
+      <button class="tab" onclick="switchTab('search',this)">🔍 Pattern Search</button>
+      <button class="tab" onclick="switchTab('analysis',this)">📊 Analisis</button>
+    </div>
+
+    <div class="tab-content">
+
+      <!-- TAB: TREE -->
+      <div class="tab-pane active" id="pane-tree">
+        <div id="tree-wrap">
+          <div class="tree-placeholder">
+            Masukkan kata lalu klik <strong>Bangun Suffix Tree</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: GRAPH (visual like image) -->
+      <div class="tab-pane" id="pane-graph">
+        <div id="graph-wrap">
+          <div class="graph-placeholder">Bangun suffix tree terlebih dahulu untuk melihat visualisasi graf.</div>
+        </div>
+      </div>
+
+      <!-- TAB: SEARCH -->
+      <div class="tab-pane" id="pane-search">
+        <div class="notice">Masukkan pattern (kata/huruf) yang ingin dicari dalam string yang sudah diinput.</div>
+        <div class="search-row">
+          <input type="text" id="search-inp" placeholder="Ketik pattern, contoh: ana">
+          <button class="search-btn" onclick="doSearch()">Cari</button>
+        </div>
+        <div id="search-result"><div class="empty">Hasil pencarian akan muncul di sini.</div></div>
+      </div>
+
+      <!-- TAB: ANALYSIS -->
+      <div class="tab-pane" id="pane-analysis">
+        <div id="analysis-body"><div class="empty">Bangun suffix tree terlebih dahulu.</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+
+class STNode {
+  constructor(start=-1, end=null) {
+    this.children     = {};
+    this.start        = start;
+    this.end          = end;
+    this.suffixIndex  = -1;
+    this.isLeaf       = false;
+  }
+}
+
+class SuffixTree {
+  constructor(s1, s2=null) {
+    this.s1   = s1;
+    this.s2   = s2;
+    this.two  = s2 != null;
+    this.text = s2 ? s1 + '#' + s2 + '$' : s1 + '$';
+    this.sep  = s2 ? s1.length : null;
+    this.n    = this.text.length;
+    this.root = new STNode();
+    this._build();
+  }
+
+  _build() {
+    for (let i = 0; i < this.n; i++) this._insert(i);
+  }
+
+  _insert(start) {
+    let node = this.root, i = start;
+    while (i < this.n) {
+      const c = this.text[i];
+      if (!node.children[c]) {
+        const leaf = new STNode(i, this.n-1);
+        leaf.suffixIndex = start; leaf.isLeaf = true;
+        node.children[c] = leaf; return;
+      }
+      let child = node.children[c];
+      const eEnd = child.end ?? this.n-1;
+      const eLen = eEnd - child.start + 1;
+      let j = 0;
+      while (j < eLen && i < this.n && this.text[child.start+j] === this.text[i]) { j++; i++; }
+      if (j === eLen) { node = child; continue; }
+      const mid = new STNode(child.start, child.start+j-1);
+      node.children[c] = mid;
+      child.start += j;
+      mid.children[this.text[child.start]] = child;
+      const leaf2 = new STNode(i, this.n-1);
+      leaf2.suffixIndex = start; leaf2.isLeaf = true;
+      mid.children[this.text[i]] = leaf2;
+      return;
+    }
+  }
+
+  edgeStr(node) {
+    const end = node.end ?? this.n-1;
+    return this.text.slice(node.start, end+1);
+  }
+
+  _leaves(node, result) {
+    if (!Object.keys(node.children).length) {
+      if (node.suffixIndex >= 0) result.push(node.suffixIndex);
+      return;
+    }
+    for (const ch of Object.values(node.children)) this._leaves(ch, result);
+  }
+
+  _pathTo(target) {
+    let found = '';
+    const dfs = (node, path) => {
+      if (node === target) { found = path; return true; }
+      for (const ch of Object.values(node.children)) {
+        if (dfs(ch, path + this.edgeStr(ch))) return true;
+      }
+      return false;
+    };
+    dfs(this.root, '');
+    return found;
+  }
+
+  which(si) {
+    if (!this.two) return 'S1';
+    return si <= this.sep ? 'S1' : 'S2';
+  }
+
+  search(pattern) {
+    let node = this.root, i = 0;
+    while (i < pattern.length) {
+      const c = pattern[i];
+      if (!node.children[c]) return [];
+      const child = node.children[c];
+      const eEnd = child.end ?? this.n-1;
+      const eLen = eEnd - child.start + 1;
+      let j = 0;
+      while (j < eLen && i < pattern.length) {
+        if (this.text[child.start+j] !== pattern[i]) return [];
+        j++; i++;
+      }
+      if (i === pattern.length) {
+        const pos = [];
+        this._leaves(child, pos);
+        return pos.filter(p => {
+          if (this.sep == null) return true;
+          const e = p + pattern.length - 1;
+          return e < this.sep || p > this.sep;
+        }).sort((a,b)=>a-b);
+      }
+      node = child;
+    }
+    return [];
+  }
+
+  lrs() {
+    let best = '';
+    const dfs = (node) => {
+      for (const ch of Object.values(node.children)) {
+        dfs(ch);
+        if (ch.children && Object.keys(ch.children).length >= 2) {
+          const path = this._pathTo(ch).replace(/\$|#/g,'');
+          if (path.length > best.length) best = path;
+        }
+      }
+    };
+    dfs(this.root);
+    return best;
+  }
+
+  lcs() {
+    if (!this.two) return '';
+    let best = '';
+    const dfs = (node) => {
+      if (!Object.keys(node.children).length) {
+        const si = node.suffixIndex;
+        return [si <= this.sep, si > this.sep];
+      }
+      let h1=false, h2=false;
+      for (const ch of Object.values(node.children)) {
+        const [c1,c2] = dfs(ch);
+        h1 = h1||c1; h2 = h2||c2;
+      }
+      if (h1 && h2) {
+        const path = this._pathTo(node).replace(/\$|#/g,'');
+        if (path.length > best.length) best = path;
+      }
+      return [h1, h2];
+    };
+    dfs(this.root);
+    return best;
+  }
+}
+
+let ST = null, mode = 1, W1 = '', W2 = '';
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-mode1').classList.toggle('active', m===1);
+  document.getElementById('btn-mode2').classList.toggle('active', m===2);
+  document.getElementById('lbl2').classList.toggle('hidden', m===1);
+  document.getElementById('inp2').classList.toggle('hidden', m===1);
+  document.getElementById('lbl1').textContent = m===2 ? 'String pertama' : 'String / Kata';
+}
+
+function run() {
+  const i1 = document.getElementById('inp1').value.trim().toLowerCase();
+  const i2 = document.getElementById('inp2').value.trim().toLowerCase();
+  if (!i1) { alert('Masukkan kata terlebih dahulu!'); return; }
+  if (mode===2 && !i2) { alert('Masukkan kata kedua!'); return; }
+  if (/[#$]/.test(i1+i2)) { alert('Karakter # dan $ tidak boleh digunakan.'); return; }
+  W1 = i1; W2 = mode===2 ? i2 : null;
+  ST = new SuffixTree(W1, W2);
+  renderTree();
+  renderGraph();
+  renderSuffixes();
+  renderStats();
+  renderAnalysis();
+}
+
+function renderTree() {
+  const wrap = document.getElementById('tree-wrap');
+  wrap.innerHTML = '';
+  const lines = [];
+
+  function drawNode(node, prefix, isLast, edgeLabel) {
+    const connector = prefix === '' ? '' : (isLast ? '└── ' : '├── ');
+    const extender  = prefix === '' ? '' : (isLast ? '    ' : '│   ');
+    const isRoot    = node === ST.root;
+    const isLeaf    = !Object.keys(node.children).length;
+
+    const line = document.createElement('div');
+    line.className = 'tree-line';
+
+    if (prefix !== '') {
+      const con = document.createElement('span');
+      con.className = 'tree-connector';
+      con.textContent = prefix + connector;
+      line.appendChild(con);
+    }
+
+    if (isRoot) {
+      const badge = document.createElement('span');
+      badge.className = 'node-root';
+      badge.textContent = '[R] ROOT';
+      line.appendChild(badge);
+      const d = document.createElement('span');
+      d.className = 'node-detail';
+      d.textContent = '← semua suffix mulai dari sini';
+      line.appendChild(d);
+    } else {
+      const clean = edgeLabel.replace(/\$/g,'[$]').replace(/#/g,'[#]');
+      if (isLeaf) {
+        const badge = document.createElement('span');
+        badge.className = 'node-leaf';
+        badge.textContent = '[L]';
+        line.appendChild(badge);
+        const el = document.createElement('span');
+        el.className = 'edge-label';
+        el.textContent = '"' + clean + '"';
+        line.appendChild(el);
+        const si = node.suffixIndex;
+        const suf = ST.text.slice(si).replace(/\$/g,'[$]').replace(/#/g,'[#]');
+        const d = document.createElement('span');
+        d.className = 'node-detail';
+        d.textContent = `← suffix[${si}] = "${suf}"`;
+        line.appendChild(d);
+        if (ST.two) {
+          const w = document.createElement('span');
+          w.className = 'node-which ' + (ST.which(si)==='S1' ? 'which-s1' : 'which-s2');
+          w.textContent = ST.which(si);
+          line.appendChild(w);
+        }
+      } else {
+        const badge = document.createElement('span');
+        badge.className = 'node-internal';
+        badge.textContent = '[I]';
+        line.appendChild(badge);
+        const el = document.createElement('span');
+        el.className = 'edge-label';
+        el.textContent = '"' + clean + '"';
+        line.appendChild(el);
+        const leaves = [];
+        ST._leaves(node, leaves);
+        const d = document.createElement('span');
+        d.className = 'node-detail';
+        d.textContent = `← ${leaves.length} suffix lewat node ini`;
+        line.appendChild(d);
+      }
+    }
+
+    lines.push(line);
+
+    const kids = Object.entries(node.children);
+    kids.forEach(([, child], idx) => {
+      const childLast = idx === kids.length-1;
+      drawNode(child, prefix + extender, childLast, ST.edgeStr(child));
+    });
+  }
+
+  drawNode(ST.root, '', true, '');
+  lines.forEach(l => wrap.appendChild(l));
+
+  let nLeaf=0, nInt=0, nTotal=0;
+  const countNodes = (node) => {
+    nTotal++;
+    if (!Object.keys(node.children).length) nLeaf++; else nInt++;
+    for (const ch of Object.values(node.children)) countNodes(ch);
+  };
+  countNodes(ST.root);
+
+  const info = document.createElement('div');
+  info.style.cssText = 'margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;gap:1.5rem';
+  info.innerHTML = `<span>Total node: <b style="color:var(--text)">${nTotal}</b></span>
+    <span>Internal <span style="color:var(--internal)">[I]</span>: <b style="color:var(--text)">${nInt-1}</b></span>
+    <span>Daun <span style="color:var(--leaf)">[L]</span>: <b style="color:var(--text)">${nLeaf}</b></span>`;
+  wrap.appendChild(info);
+}
+
+function renderSuffixes() {
+  document.getElementById('card-suffixes').style.display = '';
+  const list = document.getElementById('suffix-list');
+  list.innerHTML = '';
+
+  const addSuffix = (text, label) => {
+    const t = text + '$';
+    if (label) {
+      const h = document.createElement('div');
+      h.style.cssText = 'font-size:11px;color:var(--muted);margin:6px 0 2px;text-transform:uppercase;letter-spacing:.05em';
+      h.textContent = label;
+      list.appendChild(h);
+    }
+    for (let i=0; i<t.length; i++) {
+      const row = document.createElement('div');
+      row.className = 'suffix-row';
+      row.innerHTML = `<span class="suffix-idx">[${i}]</span><span class="suffix-text">${t.slice(i).replace(/\$/g,'<span style="color:var(--muted)">$</span>')}</span>`;
+      list.appendChild(row);
+    }
+  };
+
+  if (ST.two) {
+    addSuffix(W1, `S1 "${W1}"`);
+    addSuffix(W2, `S2 "${W2}"`);
+  } else {
+    addSuffix(W1, null);
+  }
+}
+
+function renderStats() {
+  document.getElementById('card-stats').style.display = '';
+  const body = document.getElementById('stats-body');
+  const rows = [];
+
+  if (ST.two) {
+    rows.push(['Panjang S1', W1.length]);
+    rows.push(['Panjang S2', W2.length]);
+    rows.push(['Total suffix', W1.length+1 + ' + ' + (W2.length+1)]);
+  } else {
+    rows.push(['Panjang string', W1.length]);
+    rows.push(['Jumlah suffix', W1.length+1]);
+    rows.push(['Karakter unik', [...new Set(W1)].sort().join('')]);
+  }
+
+  body.innerHTML = rows.map(([k,v]) =>
+    `<div class="stat-row"><span>${k}</span><span class="stat-val">${v}</span></div>`
+  ).join('');
+}
+
+function renderAnalysis() {
+  const body = document.getElementById('analysis-body');
+
+  const lrs = ST.lrs();
+  const lrsPos = lrs ? ST.search(lrs) : [];
+
+  const lcs = ST.two ? ST.lcs() : null;
+
+  const freq1 = buildFreq(W1);
+  const freq2 = ST.two ? buildFreq(W2) : null;
+  const maxF  = Math.max(...Object.values(freq1));
+
+  let html = '<div class="analysis-grid">';
+
+  html += `<div class="a-card">
+    <h3>🔁 Longest Repeated Substring</h3>
+    <div class="result">${lrs ? '"'+lrs+'"' : '(tidak ada)'}</div>
+    <div class="desc">
+      ${lrs ? `Panjang <b>${lrs.length}</b> karakter · muncul di posisi ${lrsPos.join(', ')}` : 'Tidak ada substring yang berulang dalam string.'}
+    </div>
+  </div>`;
+
+  if (ST.two) {
+    const p1 = lcs ? W1.indexOf(lcs) : -1;
+    const p2 = lcs ? W2.indexOf(lcs) : -1;
+    html += `<div class="a-card">
+      <h3>🤝 Longest Common Substring</h3>
+      <div class="result">${lcs ? '"'+lcs+'"' : '(tidak ada)'}</div>
+      <div class="desc">
+        ${lcs ? `Di S1 posisi [${p1}] · Di S2 posisi [${p2}]<br>Panjang <b>${lcs.length}</b> karakter` : 'Tidak ada kesamaan substring antara dua string.'}
+      </div>
+    </div>`;
+  } else {
+    const pal = longestPalindrome(W1);
+    html += `<div class="a-card">
+      <h3>🪞 Palindrome Terpanjang</h3>
+      <div class="result">${pal ? '"'+pal+'"' : '(tidak ada)'}</div>
+      <div class="desc">
+        ${pal ? `Panjang <b>${pal.length}</b> karakter` : ''}
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="a-card a-full">
+    <h3>📊 Frekuensi Karakter${ST.two ? ' — perbandingan S1 vs S2' : ''}</h3>`;
+
+  if (ST.two) {
+    const allChars = [...new Set(W1+W2)].sort();
+    html += allChars.map(c => {
+      const f1 = W1.split('').filter(x=>x===c).length;
+      const f2 = W2.split('').filter(x=>x===c).length;
+      const mf = Math.max(f1,f2,1);
+      return `<div class="freq-row">
+        <span class="freq-char">${c}</span>
+        <div style="flex:1">
+          <div style="display:flex;gap:4px;align-items:center;margin-bottom:2px">
+            <span style="font-size:10px;color:var(--accent);min-width:16px">S1</span>
+            <div class="freq-bar-wrap"><div class="freq-bar" style="width:${f1/mf*100}%;background:var(--accent)"></div></div>
+            <span class="freq-n">${f1}x</span>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <span style="font-size:10px;color:var(--accent2);min-width:16px">S2</span>
+            <div class="freq-bar-wrap"><div class="freq-bar" style="width:${f2/mf*100}%;background:var(--accent2)"></div></div>
+            <span class="freq-n">${f2}x</span>
+          </div>
+        </div>
+        ${f1>0&&f2>0 ? '<span style="font-size:10px;color:var(--success)">● ada di keduanya</span>' : ''}
+      </div>`;
+    }).join('');
+  } else {
+    const chars = [...new Set(W1)].sort();
+    html += chars.map(c => {
+      const f = W1.split('').filter(x=>x===c).length;
+      return `<div class="freq-row">
+        <span class="freq-char">${c}</span>
+        <div class="freq-bar-wrap"><div class="freq-bar" style="width:${f/maxF*100}%"></div></div>
+        <span class="freq-n">${f}x</span>
+      </div>`;
+    }).join('');
+  }
+
+  html += '</div></div>';
+
+  body.innerHTML = html;
+}
+
+
+function renderGraph() {
+  const wrap = document.getElementById('graph-wrap');
+
+  const NODE_R   = 22;   // radius internal node (circle)
+  const LEAF_W   = 40;   // leaf box width
+  const LEAF_H   = 40;   // leaf box height
+  const LEVEL_H  = 110;  // vertical gap between levels
+  const MIN_GAP  = 20;   // minimum horizontal gap between siblings
+  const PAD_X    = 60;   // horizontal padding
+  const PAD_Y    = 60;   // top padding
+
+  function countLeaves(node) {
+    const kids = Object.values(node.children);
+    if (kids.length === 0) return 1;
+    return kids.reduce((s, k) => s + countLeaves(k), 0);
+  }
+
+  const positions = new Map(); // node -> {x, y}
+  let maxX = 0, maxY = 0;
+
+  function assignPos(node, depth, xLeft, xRight) {
+    const x = (xLeft + xRight) / 2;
+    const y = PAD_Y + depth * LEVEL_H;
+    positions.set(node, { x, y });
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+
+    const kids = Object.entries(node.children);
+    if (kids.length === 0) return;
+
+    const totalLeaves = kids.reduce((s, [, k]) => s + countLeaves(k), 0);
+    let curX = xLeft;
+    for (const [, child] of kids) {
+      const lc     = countLeaves(child);
+      const share  = (xRight - xLeft) * (lc / totalLeaves);
+      assignPos(child, depth + 1, curX, curX + share);
+      curX += share;
+    }
+  }
+
+  const leafCount = countLeaves(ST.root);
+  const canvasW   = Math.max(600, leafCount * (LEAF_W + MIN_GAP) + PAD_X * 2);
+  assignPos(ST.root, 0, PAD_X, canvasW - PAD_X);
+
+  const canvasH = maxY + LEAF_H + PAD_Y;
+
+  const NS  = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('id', 'graph-svg');
+  svg.setAttribute('width', canvasW);
+  svg.setAttribute('height', canvasH);
+  svg.style.minWidth = canvasW + 'px';
+
+  const bg = document.createElementNS(NS, 'rect');
+  bg.setAttribute('width', canvasW);
+  bg.setAttribute('height', canvasH);
+  bg.setAttribute('fill', '#16181f');
+  svg.appendChild(bg);
+
+  const defs   = document.createElementNS(NS, 'defs');
+  const marker = document.createElementNS(NS, 'marker');
+  marker.setAttribute('id', 'arr');
+  marker.setAttribute('viewBox', '0 0 10 6');
+  marker.setAttribute('refX', '9');
+  marker.setAttribute('refY', '3');
+  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '8');
+  marker.setAttribute('orient', 'auto');
+  const markerPath = document.createElementNS(NS, 'path');
+  markerPath.setAttribute('d', 'M0,0 L10,3 L0,6 Z');
+  markerPath.setAttribute('fill', '#4a4d5e');
+  marker.appendChild(markerPath);
+  defs.appendChild(marker);
+  svg.appendChild(defs);
+
+  function drawEdges(node) {
+    const pos = positions.get(node);
+    for (const [, child] of Object.entries(node.children)) {
+      const cpos = positions.get(child);
+      const isLeaf = Object.keys(child.children).length === 0;
+
+      const x1 = pos.x;
+      const y1 = pos.y + NODE_R;
+      const x2 = cpos.x;
+      const y2 = isLeaf ? cpos.y - LEAF_H/2 : cpos.y - NODE_R;
+
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('stroke', '#4a4d5e');
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('marker-end', 'url(#arr)');
+      svg.appendChild(line);
+
+      const mx   = (x1 + x2) / 2;
+      const my   = (y1 + y2) / 2;
+      const edge = ST.edgeStr(child).replace(/\$/g, '$').replace(/#/g, '#');
+      const lbl  = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', mx + 8);
+      lbl.setAttribute('y', my);
+      lbl.setAttribute('fill', '#7a7d8e');
+      lbl.setAttribute('font-size', '12');
+      lbl.setAttribute('font-family', "'Space Mono', monospace");
+      lbl.setAttribute('text-anchor', 'start');
+      lbl.setAttribute('dominant-baseline', 'middle');
+      lbl.textContent = edge;
+      svg.appendChild(lbl);
+
+      drawEdges(child);
+    }
+  }
+
+  drawEdges(ST.root);
+
+  function drawNodes(node) {
+    const pos    = positions.get(node);
+    const isLeaf = Object.keys(node.children).length === 0;
+    const isRoot = node === ST.root;
+
+    if (isLeaf) {
+      const si  = node.suffixIndex;
+      const rx  = pos.x - LEAF_W/2;
+      const ry  = pos.y - LEAF_H/2;
+
+      const rect = document.createElementNS(NS, 'rect');
+      rect.setAttribute('x', rx);
+      rect.setAttribute('y', ry);
+      rect.setAttribute('width', LEAF_W);
+      rect.setAttribute('height', LEAF_H);
+      rect.setAttribute('rx', '6');
+      rect.setAttribute('fill', '#1a7a4a');
+      rect.setAttribute('stroke', '#26b872');
+      rect.setAttribute('stroke-width', '1.5');
+      svg.appendChild(rect);
+
+      const txt = document.createElementNS(NS, 'text');
+      txt.setAttribute('x', pos.x);
+      txt.setAttribute('y', pos.y);
+      txt.setAttribute('fill', '#ffffff');
+      txt.setAttribute('font-size', '14');
+      txt.setAttribute('font-weight', '700');
+      txt.setAttribute('font-family', "'Space Mono', monospace");
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('dominant-baseline', 'middle');
+      txt.textContent = si;
+      svg.appendChild(txt);
+
+      if (ST.two) {
+        const wh  = ST.which(si);
+        const badge = document.createElementNS(NS, 'text');
+        badge.setAttribute('x', pos.x);
+        badge.setAttribute('y', pos.y + LEAF_H/2 + 13);
+        badge.setAttribute('fill', wh === 'S1' ? '#7c6ff7' : '#4ecdc4');
+        badge.setAttribute('font-size', '10');
+        badge.setAttribute('font-family', "'DM Sans', sans-serif");
+        badge.setAttribute('text-anchor', 'middle');
+        badge.textContent = wh;
+        svg.appendChild(badge);
+      }
+    } else {
+      const col = isRoot ? '#2563eb' : '#3b82f6';
+
+      const circle = document.createElementNS(NS, 'circle');
+      circle.setAttribute('cx', pos.x);
+      circle.setAttribute('cy', pos.y);
+      circle.setAttribute('r', NODE_R);
+      circle.setAttribute('fill', col);
+      circle.setAttribute('stroke', '#93c5fd');
+      circle.setAttribute('stroke-width', isRoot ? '2.5' : '1.5');
+      svg.appendChild(circle);
+
+      if (isRoot) {
+        const txt = document.createElementNS(NS, 'text');
+        txt.setAttribute('x', pos.x);
+        txt.setAttribute('y', pos.y);
+        txt.setAttribute('fill', '#fff');
+        txt.setAttribute('font-size', '9');
+        txt.setAttribute('font-family', "'DM Sans', sans-serif");
+        txt.setAttribute('font-weight', '600');
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('dominant-baseline', 'middle');
+        txt.textContent = 'ROOT';
+        svg.appendChild(txt);
+      }
+    }
+
+    for (const child of Object.values(node.children)) {
+      drawNodes(child);
+    }
+  }
+
+  drawNodes(ST.root);
+
+  const lgY = 18;
+  const lc = document.createElementNS(NS, 'circle');
+  lc.setAttribute('cx', 20); lc.setAttribute('cy', lgY);
+  lc.setAttribute('r', 8); lc.setAttribute('fill', '#3b82f6');
+  svg.appendChild(lc);
+  const lt1 = document.createElementNS(NS, 'text');
+  lt1.setAttribute('x', 34); lt1.setAttribute('y', lgY);
+  lt1.setAttribute('fill', '#7a7d8e'); lt1.setAttribute('font-size', '11');
+  lt1.setAttribute('font-family', "'DM Sans', sans-serif");
+  lt1.setAttribute('dominant-baseline', 'middle');
+  lt1.textContent = 'Internal node';
+  svg.appendChild(lt1);
+  const lr = document.createElementNS(NS, 'rect');
+  lr.setAttribute('x', 130); lr.setAttribute('y', lgY - 8);
+  lr.setAttribute('width', 16); lr.setAttribute('height', 16);
+  lr.setAttribute('rx', '3'); lr.setAttribute('fill', '#1a7a4a');
+  lr.setAttribute('stroke', '#26b872'); lr.setAttribute('stroke-width', '1');
+  svg.appendChild(lr);
+  const lt2 = document.createElementNS(NS, 'text');
+  lt2.setAttribute('x', 152); lt2.setAttribute('y', lgY);
+  lt2.setAttribute('fill', '#7a7d8e'); lt2.setAttribute('font-size', '11');
+  lt2.setAttribute('font-family', "'DM Sans', sans-serif");
+  lt2.setAttribute('dominant-baseline', 'middle');
+  lt2.textContent = 'Daun / suffix index';
+  svg.appendChild(lt2);
+
+  wrap.innerHTML = '';
+  wrap.appendChild(svg);
+}
+
+function doSearch() {
+  const pat = document.getElementById('search-inp').value.trim();
+  const out  = document.getElementById('search-result');
+  if (!ST) { out.innerHTML = '<div class="empty">Bangun suffix tree dulu!</div>'; return; }
+  if (!pat) { out.innerHTML = '<div class="empty">Masukkan pattern.</div>'; return; }
+
+  if (ST.two) {
+    const st1 = new SuffixTree(W1);
+    const st2 = new SuffixTree(W2);
+    const p1  = st1.search(pat);
+    const p2  = st2.search(pat);
+
+    let html = '';
+
+    html += `<div style="margin-bottom:.75rem">
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">S1 "${W1}"</span><br>`;
+    if (p1.length) {
+      html += `<span class="found-ok">✅ Ditemukan ${p1.length}x</span> di posisi `;
+      html += p1.map(p=>`<span class="hit-pos">[${p}]</span>`).join(' ') + '<br>';
+      html += highlightStr(W1, pat, p1);
+    } else {
+      html += `<span class="not-found">❌ Tidak ditemukan</span>`;
+    }
+    html += '</div>';
+
+    html += `<div>
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">S2 "${W2}"</span><br>`;
+    if (p2.length) {
+      html += `<span class="found-ok">✅ Ditemukan ${p2.length}x</span> di posisi `;
+      html += p2.map(p=>`<span class="hit-pos">[${p}]</span>`).join(' ') + '<br>';
+      html += highlightStr(W2, pat, p2);
+    } else {
+      html += `<span class="not-found">❌ Tidak ditemukan</span>`;
+    }
+    html += '</div>';
+
+    if (p1.length && p2.length) {
+      html += `<div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border);color:var(--accent3)">
+        ★ Pattern "<b>${pat}</b>" ada di <b>kedua string!</b>
+      </div>`;
+    }
+
+    out.innerHTML = html;
+  } else {
+    const pos = ST.search(pat);
+    if (!pos.length) {
+      out.innerHTML = `<span class="not-found">❌ Pattern "<b>${pat}</b>" tidak ditemukan dalam "${W1}".</span>`;
+      return;
+    }
+    let html = `<span class="found-ok">✅ Ditemukan ${pos.length}x</span> di posisi `;
+    html += pos.map(p=>`<span class="hit-pos">[${p}]</span>`).join(' ');
+    html += '<br><br>' + highlightStr(W1, pat, pos);
+    html += `<div style="margin-top:.75rem;font-size:12px;color:var(--muted)">`;
+    pos.forEach(p => {
+      const before = W1.slice(Math.max(0,p-3),p);
+      const match  = W1.slice(p, p+pat.length);
+      const after  = W1.slice(p+pat.length, p+pat.length+3);
+      html += `posisi [${p}] → ...${before}<span class="hit-word">${match}</span>${after}...<br>`;
+    });
+    html += '</div>';
+    out.innerHTML = html;
+  }
+}
+
+function highlightStr(str, pat, positions) {
+  const posSet = new Set(positions);
+  let result = '<span style="font-family:var(--mono);font-size:13px">';
+  let i = 0;
+  while (i < str.length) {
+    if (posSet.has(i) && i+pat.length <= str.length) {
+      result += `<span class="hit-word">${str.slice(i, i+pat.length)}</span>`;
+      i += pat.length;
+    } else {
+      result += str[i]; i++;
+    }
+  }
+  result += '</span>';
+  return result;
+}
+
+function buildFreq(str) {
+  const f = {};
+  for (const c of str) f[c] = (f[c]||0)+1;
+  return f;
+}
+
+function longestPalindrome(s) {
+  let best = s[0] || '';
+  for (let c=0; c<s.length; c++) {
+    for (let d=0; d<=1; d++) {
+      let lo=c, hi=c+d;
+      while (lo>=0 && hi<s.length && s[lo]===s[hi]) { lo--; hi++; }
+      const pal = s.slice(lo+1, hi);
+      if (pal.length > best.length) best = pal;
+    }
+  }
+  return best;
+}
+
+function switchTab(key, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-'+key).classList.add('active');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.target.id==='inp1'||e.target.id==='inp2')) run();
+  if (e.key === 'Enter' && e.target.id==='search-inp') doSearch();
+});
+</script>
+</body>
+</html>
